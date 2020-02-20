@@ -7,7 +7,7 @@ import numpy as np
 
 HOURS = 12
 ADDER = 4
-CARRY = ADDER - 1
+CARRY = ADDER - 1 # Do NOT modify!
 
 comments = 0
 
@@ -39,7 +39,7 @@ def encode_next(cols: int, rows: int, x: int, y: int, hour: int, num: int):
 
 
 def last_rule(cols, rows):
-    return cols * rows * HOURS * (ADDER + CARRY + 1)
+    return cols * rows * HOURS * (ADDER * 2)
 
 
 def read_labyrinth(name):
@@ -282,7 +282,7 @@ rules5 = unicity_rules(rws, cls)
 
 rules_tot = rules1 + rules2 + rules3 + rules4 + rules5
 f = open("satfile.txt", "w")
-total = cls * rws * HOURS * 8
+total = cls * rws * HOURS * (ADDER * 2)
 f.write(f"p cnf {total} {len(rules_tot)}\n")
 f.write(''.join(rules_tot))
 f.close()
