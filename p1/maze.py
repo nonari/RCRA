@@ -6,8 +6,8 @@ import numpy as np
 
 
 HOURS = 12
-ADDER = 4
-CARRY = ADDER - 1 # Do NOT modify!
+ADDER = 3
+CARRY = ADDER - 1  # Do NOT modify!
 
 comments = 0
 
@@ -211,6 +211,7 @@ def sum_rules(cols: int, rows: int):
 
 def unicity_rules(rows, cols):
     rules = []
+    # Just one hour for a cell
     for x in range(0, cols):
         for y in range(0, rows):
             for h1 in range(1, HOURS + 1):
@@ -218,13 +219,14 @@ def unicity_rules(rows, cols):
                     cell_h1 = encode_cell_state(cols, x, y, h1)
                     cell_h2 = encode_cell_state(cols, x, y, h2)
                     rules.append(f'-{cell_h1} -{cell_h2} 0\n')
-    # TODO
+
+    # Avoid all 0 solutions
     for x in range(0, cols):
         for y in range(0, rows):
             ors = []
             for h1 in range(1, HOURS + 1):
-                ors.append(f'{encode_cell_state(cols, x, y, h1)}')
-
+                ors.append(f'{encode_cell_state(cols, x, y, h1)} ')
+            rules.append(f'{"".join(ors)} 0\n')
     return rules
 
 
@@ -269,10 +271,22 @@ def build_solution(cols, rows):
                     negate = True
                 else:
                     number += c
-    return np.array(checkerboard).reshape((rows, cols))
+    to_hex = np.vectorize(lambda x: f'{hex(x)[2:]}'.capitalize())
+    hex_sol = to_hex(np.array(checkerboard).reshape((rows, cols)))
+    return hex_sol
 
 
-cls, rws, lab = read_labyrinth("maze2.txt")
+def compress(solution):
+    final_form = []
+    height, width = solution.shape
+    for y in range(0, height):
+        for x in range(0, width):
+            final_form.append(solution[y, x])
+        final_form.append('\n')
+    return ''.join(final_form)
+
+
+cls, rws, lab = read_labyrinth("./examples/dom47.txt")
 hours = cls * rws / HOURS
 rules1 = sequence_rules(cls, lab)
 rules2 = sequence_rules_v(cls, lab)
@@ -288,4 +302,6 @@ f.write(''.join(rules_tot))
 f.close()
 
 system("clasp --verbose=0 satfile.txt > result.txt")
-print(build_solution(cls, rws))
+sol = build_solution(cls, rws)
+print(sol)
+print(compress(sol))
