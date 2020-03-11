@@ -1,15 +1,13 @@
+#!/usr/bin/python
+
 from math import trunc, fabs
 from os import system
-import time
-
-import numpy as np
+import sys
 
 
 HOURS = 12
 ADDER = 3
 CARRY = ADDER - 1  # Do NOT modify!
-
-comments = 0
 
 
 def decode_cell_state(cols: int, number: int):
@@ -66,77 +64,61 @@ def parse_line(string, cols: int):
     return line
 
 
-def sequence_rules(cols, labyrinth):
+def to_matrix(labyrinth):
+    matrix = []
+    for row in labyrinth:
+        r = []
+        for elem in row:
+            r.append(elem)
+        matrix.append(r)
+    return matrix
+
+
+def rotate(labyrinth):
+    cols = len(labyrinth[0])
+    maze = [""] * cols
+    for row in labyrinth:
+        i = 0
+        for w in row:
+            maze[i] += w
+            i += 1
+    return maze
+
+
+def sequence_rules(cols, labyrinth, trasp=False):
+    maze = to_matrix(labyrinth)
     inner = []
     rules = []
     for line in labyrinth:
         inner += line
-    lmap = np.array(inner)
-    lines_number = int(len(inner) / (cols * 2 - 1))
-    lmap = lmap.reshape((lines_number, cols * 2 - 1))
-    width = lmap.shape[1]
-    height = lmap.shape[0]
+    width = (cols * 2 - 1)
+    height = int(len(inner) / (cols * 2 - 1))
+    rows = int(height / 2) + 1
     for y in range(0, height):
         if y % 2 != 0:
             continue
         for x in range(0, width - 1):
             if x % 2 != 0:
                 continue
-            c = lmap[y][x]
+            c = maze[y][x]
             if c == 'x':
                 c = None
             else:
                 c = int(f'0x{c}', 16)
-            w = lmap[y][x+1]
-            if w == '|':
+            w = maze[y][x+1]
+            if w == '|' or w == '-':
                 continue
             if x < width:
-                cn = lmap[y][x+2]
+                cn = maze[y][x+2]
                 if cn == 'x':
                     cn = None
                 else:
                     cn = int(f'0x{cn}', 16)
-                adjacency_pair_rules(rules, cols, x / 2, y / 2, x / 2 + 1, y / 2, c, cn)
-    return rules
-
-
-def sequence_rules_v(cols, labyrinth):
-    inner = []
-    rules = []
-    for line in labyrinth:
-        inner += line
-    lmap = np.array(inner)
-    lines_number = int(len(inner) / (cols * 2 - 1))
-    lmap = lmap.reshape((lines_number, cols * 2 - 1))
-    width = lmap.shape[1]
-    height = lmap.shape[0]
-    for x in range(0, width):
-        if x % 2 != 0:
-            continue
-        for y in range(0, height-1):
-            if y % 2 != 0:
-                continue
-            c = lmap[y][x]
-            if c == 'x':
-                c = None
-            else:
-                c = int(c, 16)
-            w = lmap[y+1][x]
-            if w == '|' or w == '-':
-                continue
-            if y < height:
-                cn = lmap[y+2][x]
-                if cn == 'x':
-                    cn = None
+                if trasp:
+                    adjacency_pair_rules(rules, rows, y / 2, x / 2, y / 2, x / 2 + 1, c, cn)
                 else:
-                    cn = int(cn, 16)
-                adjacency_pair_rules(rules, cols, x / 2, y / 2, x / 2, y / 2 + 1, c, cn)
+                    adjacency_pair_rules(rules, cols, x / 2, y / 2, x / 2 + 1, y / 2, c, cn)
     return rules
-
-
-def write_comment(rules, comm):
-    rules.append(f'{comm}')
-    s = comments + 1
 
 
 def adjacency_pair_rules(rules, cols, x1, y1, x2, y2, h1, h2):
@@ -248,11 +230,11 @@ def final_rules(rows, cols):
 
 
 def build_solution(cols, rows):
-    checkerboard = []
+    solution = []
 
-    f = open("result.txt", "r")
+    file = open("result.txt", "r")
     while True:
-        line = f.readline()
+        line = file.readline()
         if not line:
             break
         if line[0] == 'v':
@@ -263,7 +245,7 @@ def build_solution(cols, rows):
                     if int(number) > (rows * cols * HOURS):
                         break
                     if not negate:
-                        checkerboard.append(decode_cell_state(cols, int(number))[2])
+                        solution.append(decode_cell_state(cols, int(number))[2])
                     number = ""
                     negate = False
                     continue
@@ -271,37 +253,48 @@ def build_solution(cols, rows):
                     negate = True
                 else:
                     number += c
-    to_hex = np.vectorize(lambda x: f'{hex(x)[2:]}'.capitalize())
-    hex_sol = to_hex(np.array(checkerboard).reshape((rows, cols)))
-    return hex_sol
+    checkerboard = []
+    line = []
+    i = 0
+    for v in solution:
+        line.append(f'{hex(v)[2:]}'.capitalize())
+        i += 1
+        if i == cols:
+            checkerboard.append(line)
+            i = 0
+            line = []
+
+    return checkerboard
 
 
-def compress(solution):
+def compress(solution, cols, rows):
     final_form = []
-    height, width = solution.shape
-    for y in range(0, height):
-        for x in range(0, width):
-            final_form.append(solution[y, x])
+    for y in range(0, rows):
+        for x in range(0, cols):
+            final_form.append(solution[y][x])
         final_form.append('\n')
     return ''.join(final_form)
 
 
-cls, rws, lab = read_labyrinth("./examples/dom47.txt")
-hours = cls * rws / HOURS
-rules1 = sequence_rules(cls, lab)
-rules2 = sequence_rules_v(cls, lab)
-rules3 = sum_rules(cls, rws)
-rules4 = final_rules(cls, rws)
-rules5 = unicity_rules(rws, cls)
+def main(filename):
+    cls, rws, lab = read_labyrinth(filename)
+    rules1 = sequence_rules(cls, lab)
+    rules2 = sequence_rules(rws, rotate(lab), True)
+    rules3 = sum_rules(cls, rws)
+    rules4 = final_rules(cls, rws)
+    rules5 = unicity_rules(rws, cls)
 
-rules_tot = rules1 + rules2 + rules3 + rules4 + rules5
-f = open("satfile.txt", "w")
-total = cls * rws * HOURS * (ADDER * 2)
-f.write(f"p cnf {total} {len(rules_tot)}\n")
-f.write(''.join(rules_tot))
-f.close()
+    rules_tot = rules1 + rules2 + rules3 + rules4 + rules5
+    f = open("satfile.txt", "w")
+    total = cls * rws * HOURS * (ADDER * 2)
+    f.write(f"p cnf {total} {len(rules_tot)}\n")
+    f.write(''.join(rules_tot))
+    f.close()
 
-system("clasp --verbose=0 satfile.txt > result.txt")
-sol = build_solution(cls, rws)
-print(sol)
-print(compress(sol))
+    system("clasp --verbose=0 satfile.txt > result.txt")
+    sol = build_solution(cls, rws)
+    print(compress(sol, cls, rws))
+
+
+if __name__ == "__main__":
+    main(sys.argv[1])
