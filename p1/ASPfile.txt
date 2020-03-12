@@ -1,0 +1,19 @@
+h(0..l-1).
+c(0..t-1).
+
+% Neighbour transitivity
+nh(c(X),c(Y)) :- nh(c(Y),c(X)), X!=Y.
+
+% Each cell has only one hour
+:- ch(c(X),h(H1)), ch(c(X),h(H2)), H1!=H2.
+
+% Each hour is repeated r times
+r{ch(c(X),h(H)):c(X)}r:-h(H).
+
+% Neighbours have secuential hours
+m(-1;1).
+%:- nh(c(X),c(Y)), ch(c(X),h(H1)), ch(c(Y),h(H2)), H1!=(((H2+l)+1)\l), H1!=(((H2+l)-1)\l), X!=Y.
+ch(c(X),h(((H2+l)+1)\l)),ch(c(X),h(((H2+l)-1)\l)):- nh(c(X),c(Y)), ch(c(Y),h(H2)).
+
+#show ch/2.
+
