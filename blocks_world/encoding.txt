@@ -2,6 +2,10 @@
 blk(1..n).
 stk(1..n).
 
+% on(S,L,B): block B is at level L in Stack S
+% height(S,H): stack S has H blocks
+% mov(B,S): move block B to stack S
+
 #program dynamic.
 %Generate movement
 1{mov(B,S) : _blk(B), _stk(S)}1.
@@ -21,11 +25,9 @@ height(S,H+1) :- 'height(S,H), mov(B,S).
 height(S,L-1) :- 'on(S,L,B), mov(B).
 
 % Can't move blocks not on top
-:- 'height(S,H), 'on(S,L,B), mov(B), L<H.
+:- 'height(S,H), 'on(S,L,B), mov(B), L!=H.
 
 % Effects
 on(S,H+1,B) :- 'height(S,H), mov(B,S).
-
-#program final.
 
 #show mov/2.

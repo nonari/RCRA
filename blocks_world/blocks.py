@@ -1,5 +1,5 @@
 import re
-from os import system
+from os import system, stat
 import sys
 
 
@@ -32,7 +32,20 @@ def get_problem_states(filename):
 
 
 def build_solution():
-    pass
+    solution = []
+    statinfo = stat('result.txt')
+    if statinfo.st_size < 15:
+        print("UNSATISFIABLE")
+        exit(0)
+    file = open("result.txt", "r")
+    while True:
+        line = file.readline()
+        if not line:
+            break
+        if line.find("mov(") > -1:
+            solution.append(line.strip() + "\n")
+
+    return ''.join(solution)
 
 
 def stack_facts(stacks):
@@ -53,14 +66,14 @@ def format_initial(facts):
     reformated = []
     for fact in facts:
         reformated.append(fact + ".\n")
-    return ''.join(reformated)
+    return "#program initial.\n" + ''.join(reformated)
 
 
 def format_final(facts):
     reformated = []
     for fact in facts:
         reformated.append(fact + ",")
-    return "goal :-" + ''.join(reformated)[0:-1] + ".\n:- not goal"
+    return "#program final.\ngoal :-" + ''.join(reformated)[0:-1] + ".\n:- not goal."
 
 
 def main(filename):
@@ -73,7 +86,7 @@ def main(filename):
     problem_file.write(format_initial(facts1))
     problem_file.write(format_final(facts2))
     problem_file.close()
-    system("telingo --verbose=0 encoding.txt instance.txt > result.txt")
+    # system("telingo --verbose=0 encoding.txt instance.txt > result.txt")
     print(build_solution())
 
 
