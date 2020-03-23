@@ -1,0 +1,31 @@
+#program initial.
+blk(1..n).
+stk(1..n).
+
+#program dynamic.
+%Generate movement
+1{mov(B,S) : _blk(B), _stk(S)}1.
+
+% Moved block
+mov(B) :- mov(B,S).
+
+% Inertia
+on(S,L,B) :- 'on(S,L,B), not mov(B).
+height(S,H) :- 'height(S,H), 'on(S,H,B), not mov(B).
+
+% Don't do self movements
+:- 'on(S,L,B), mov(B,S).
+
+% Stack height
+height(S,H+1) :- 'height(S,H), mov(B,S).
+height(S,L-1) :- 'on(S,L,B), mov(B).
+
+% Can't move blocks not on top
+:- 'height(S,H), 'on(S,L,B), mov(B), L<H.
+
+% Effects
+on(S,H+1,B) :- 'height(S,H), mov(B,S).
+
+#program final.
+
+#show mov/2.

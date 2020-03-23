@@ -288,13 +288,13 @@ def main(filename):
     rules5 = unicity_rules(rws, cls)
 
     rules_tot = rules1 + rules2 + rules3 + rules4 + rules5
-    f = open("SATproblem.txt", "w")
+    f = open("instance.txt", "w")
     total = cls * rws * HOURS * (ADDER * 2)
     f.write(f"p cnf {total} {len(rules_tot)}\n")
     f.write(''.join(rules_tot))
     f.close()
 
-    system("clasp --verbose=0 SATproblem.txt > result.txt")
+    system("clasp --verbose=0 instance.txt > result.txt")
     sol = build_solution(cls, rws)
     print(compress(sol, cls, rws))
 

@@ -171,14 +171,14 @@ def main(filename):
     total = cls * rws
 
     rules_tot = rules1 + rules2
-    problem_file = open("ASPproblem.txt", "w")
+    problem_file = open("instance.txt", "w")
     problem_file.write(f"#const t = {total}.\n")
     problem_file.write(f"#const l = {HOURS}.\n")
     problem_file.write(f"#const r = {int(total/HOURS)}.\n")
     problem_file.write(''.join(rules_tot))
     problem_file.close()
-    system("cat ASPfile.txt >> ASPproblem.txt")
-    system("clingo --verbose=0 ASPproblem.txt > result.txt")
+    system("cat encoding.txt >> instance.txt")
+    system("clingo --verbose=0 instance.txt > result.txt")
     print(build_solution(cls, rws))
 
 
