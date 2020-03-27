@@ -35,10 +35,6 @@ def get_problem_states(filename):
 
 def build_solution():
     solution = []
-    statinfo = stat('result.txt')
-    if statinfo.st_size < 15:
-        print("UNSATISFIABLE")
-        exit(0)
     file = open("result.txt", "r")
     while True:
         line = file.readline()
@@ -46,7 +42,7 @@ def build_solution():
             break
         if line.find("mov(") > -1:
             solution.append(line.strip() + "\n")
-
+    file.close()
     return ''.join(solution)
 
 
@@ -93,22 +89,12 @@ def format_final(facts):
 def main(argv):
     exhaustive = False
     shift = True
-    fail = False
-    for i in range(1, len(argv)):
-        if i == 2:
-            if argv[2] == "--exhaustive":
-                exhaustive = True
-            else:
-                fail = True
-        if i == 3:
-            if argv[3] == "--noshift":
-                shift = False
-            else:
-                fail = True
+    for i in range(2, len(argv)):
+        if argv[i] == "--exhaustive":
+            exhaustive = True
+        if argv[i] == "--noshift":
+            shift = False
     filename = argv[1]
-    if fail:
-        print(HELP)
-        exit(0)
 
     n, initial, final = get_problem_states(filename)
     facts1 = stack_facts(initial)
@@ -130,15 +116,16 @@ def main(argv):
     problem_file.write(format_final(facts2))
     problem_file.close()
 
-    statinfo = stat('result.txt')
+    statinfo = stat('telingo_path.config')
     if statinfo.st_size > 0:
         path_file = open("telingo_path.config")
         telingo_path = path_file.readline()
+        if telingo_path.endswith('\n'):
+            telingo_path = telingo_path[0:-1]
         path_file.close()
     else:
         telingo_path = "telingo"
-
-    system(telingo_path + " --verbose=0 encoding.txt instance.txt 2>/dev/null > result.txt")
+    system(telingo_path + " --verbose=0 encoding.txt instance.txt > result.txt 2> /dev/null")
     print(build_solution())
 
 
