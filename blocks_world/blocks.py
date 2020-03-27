@@ -1,6 +1,8 @@
-import re
+import subprocess
 from os import system, stat
 import sys
+
+HELP = "blocks filename [--exhaustive] [--noshift]"
 
 
 def parse_stack(line):
@@ -48,9 +50,21 @@ def build_solution():
     return ''.join(solution)
 
 
-def stack_facts(stacks):
+def final_stack_facts(stacks, offset):
     facts = []
-    s = 1
+    s = 1 + offset
+    for stack in stacks:
+        lv = 1
+        for block in stack:
+            facts.append(f'fn({s},{lv},{block})')
+            lv += 1
+        s += 1
+    return facts
+
+
+def stack_facts(stacks, offset=0):
+    facts = []
+    s = 1 + offset
     for stack in stacks:
         h = len(stack)
         facts.append(f'height({s},{h})')
@@ -76,19 +90,60 @@ def format_final(facts):
     return "#program final.\ngoal :-" + ''.join(reformated)[0:-1] + ".\n:- not goal."
 
 
-def main(filename):
+def main(argv):
+    exhaustive = False
+    shift = True
+    fail = False
+    for i in range(1, len(argv)):
+        if i == 2:
+            if argv[2] == "--exhaustive":
+                exhaustive = True
+            else:
+                fail = True
+        if i == 3:
+            if argv[3] == "--noshift":
+                shift = False
+            else:
+                fail = True
+    filename = argv[1]
+    if fail:
+        print(HELP)
+        exit(0)
+
     n, initial, final = get_problem_states(filename)
     facts1 = stack_facts(initial)
-    facts2 = stack_facts(final)
+    initial_stacks = len(initial)
+    total_stacks = initial_stacks + len(final)
+
+    offset = 0
+    if shift:
+        offset = initial_stacks
+    facts2 = stack_facts(final, offset)
+    facts3 = final_stack_facts(final, offset)
 
     problem_file = open("instance.txt", "w")
     problem_file.write(f"#const n = {n}.\n")
-    problem_file.write(format_initial(facts1))
+    problem_file.write(f"#const s = {total_stacks}.\n")
+    if exhaustive:
+        problem_file.write("#program initial.\n exhaustive.\n")
+    problem_file.write(format_initial(facts1 + facts3))
     problem_file.write(format_final(facts2))
     problem_file.close()
-    # system("telingo --verbose=0 encoding.txt instance.txt > result.txt")
+
+    statinfo = stat('result.txt')
+    if statinfo.st_size > 0:
+        path_file = open("telingo_path.config")
+        telingo_path = path_file.readline()
+        path_file.close()
+    else:
+        telingo_path = "telingo"
+
+    system(telingo_path + " --verbose=0 encoding.txt instance.txt 2>/dev/null > result.txt")
     print(build_solution())
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    if len(sys.argv) < 2:
+        print(HELP)
+        exit(0)
+    main(sys.argv)
