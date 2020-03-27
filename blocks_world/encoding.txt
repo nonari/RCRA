@@ -7,7 +7,7 @@ blk(1..n).
 stk(0..s).
 h(0..n).
 
-% Some final states are put at program initial so we can refer them always 
+% Final states are also at program initial so we can reference them always 
 % Final height
 hf(S,H) :- H{fn(S,L,B):blk(B),blk(L)}H, stk(S), S!=0, h(H).
 
@@ -16,13 +16,21 @@ height(S,H) :- H{on(S,L,B):blk(B),blk(L)}H, stk(S), S!=0, h(H).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #program always.
-% Candidate movements
 
-% Blocks to destiny have priority 1
+% Mark well formed stacks for max current height
+match(S,L) :- height(S,H), _fn(S,L,B), on(S,L,B), L<=H, S!=0.
+well(S) :- height(S,H), H{match(S,L) : _blk(L)}H, S!=0.
+bad(S) :- not well(S), _stk(S), S!=0.
+
+% Complete stacks
+comp(S) :- _hf(S,H), height(S,H), well(S).
+
+% Candidate movements
+% Blocks to destiny have higher priority
 fcand(B,S) :- on(0,0,B), _fn(S,L,B), height(S,L-1), S!=0, well(S), not comp(S). 
 fcand(B,SD) :- on(SO,L1,B), height(SO,L1), _fn(SD,L2,B), height(SD,L2-1), well(SD).
 
-% Blocks from stack to ground have priority 2
+% Blocks from stack to ground have lower priority
 scand(B,0) :- on(S,L1,B), height(S,L1), bad(S).
 
 % Select just one prioritary movement as posibility for this state
@@ -31,26 +39,18 @@ gt(fcand(B1,S1), fcand(B2,S2)) :- fcand(B1,S1), fcand(B2,S2), B1>B2.
 ffcand(B2,S2) :- fcand(B2,S2), 0{fcand(B2,S2) : gt(fcand(B1,S1), fcand(B2,S2))}0.
 excand(B,S) :- ffcand(B,S).
 
-% If no prioritary movements consider unstack movs
+% If no prioritary movements consider unstack to ground movements
 excand(B,S) :- scand(B,S), 0{ffcand(_,_)}0.
 
-
+%%%%%%%%%%%%%%%
 % WORKING MODES
-% EXHAUSTIVE consider all unstacking movements posible for each state
+% EXHAUSTIVE consider all unstacking to ground movements posible for each state
 cand(B,S) :- excand(B,S), _exhaustive.
 
-% HEURISTIC choose just one unstaking movement per state
+% HEURISTIC choose just one unstaking to ground movement per state
 gte(excand(B1,S1),excand(B2,S2)) :- excand(B1,S1), excand(B2,S2), B1>B2, not _exhaustive.
 cand(B2,S2) :- excand(B2,S2), 0{excand(B2,S2) : gte(excand(B1,S1), excand(B2,S2))}0, not _exhaustive.
-
-% Complete stacks
-comp(S) :- _hf(S,H), height(S,H), well(S).
-
-% Mark well formed stacks for max current height
-match(S,L) :- height(S,H), _fn(S,L,B), on(S,L,B), L<=H, S!=0.
-well(S) :- height(S,H), H{match(S,L) : _blk(L)}H, S!=0.
-bad(S) :- not well(S), _stk(S), S!=0.
-
+%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #program dynamic.
@@ -64,30 +64,26 @@ mov(B) :- mov(B,S).
 % Inertia
 on(S,L,B) :- 'on(S,L,B), not mov(B).
 height(S,H) :- not c(height(S,_)), 'height(S,H).
-height(S,H) :- c(height(S,H)).
 
 % Don't do self movements
 :- 'on(S,L,B), mov(B,S).
 
-% Stack height 
+% Stack height change 
 c(height(S,H+1)) :- 'height(S,H), mov(B,S), S!=0.
 c(height(S,L-1)) :- 'on(S,L,B), mov(B), S!=0.
+height(S,H) :- c(height(S,H)).
 
-% Can't move blocks not on top
-:- 'height(S,H), 'on(S,L,B), mov(B), L<H, S!=0.
-
-% Effect of block moved to stack
+% Block moved to stack
 on(S,H+1,B) :- 'height(S,H), mov(B,S), S!=0.
 
 % Block moved to table
 on(0,0,B) :- mov(B,0).
 
-% Don't undo movements
-:- 'on(S1,L,B), 'mov(B,S2), mov(B,S1).
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #program final.
+
+% Final heights
 height(S,H) :- H{on(S,L,B):blk(B),blk(L)}H, stk(S), S!=0, blk(H).
 
 #show mov/2.
+

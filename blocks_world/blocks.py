@@ -135,8 +135,6 @@ def stack_facts(stacks, offset=0):
     facts = []
     s = 1 + offset
     for stack in stacks:
-        h = len(stack)
-        facts.append(f'height({s},{h})')
         lv = 1
         for block in stack:
             facts.append(f'on({s},{lv},{block})')
