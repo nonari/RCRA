@@ -1,4 +1,5 @@
-import subprocess
+#!/usr/bin/python3
+
 from os import system, stat
 import sys
 
