@@ -1,9 +1,81 @@
 #!/usr/bin/python3
 
-from os import system, stat
-import sys
+from os import system
+import sys, re
 
-HELP = "blocks filename [--exhaustive] [--noshift]"
+MOV_PATTERN = re.compile('mov\(([0-9]+),([0-9]+)\)')
+
+HELP = "blocks filename [-exhaustive] [-noshift] [-telpath <path>] [-check]"
+
+
+def adjust(initial, final, offset=0):
+    for i in range(offset):
+        final.insert(0, [])
+    diff = len(initial) - len(final)
+    absdiff = abs(diff)
+    if diff < 0:
+        for i in range(absdiff):
+            initial.append([])
+    if diff > 0:
+        for i in range(absdiff):
+            final.append([])
+
+
+def check(offset, movs, initial, final):
+    adjust(initial, final, offset)
+    n = len(initial)
+    table = set()
+    for mov in movs:
+        block = mov[0]
+        dest = mov[1]
+        found = False
+        if block in table:
+            found = True
+            table.remove(block)
+        else:
+            for stack in initial:
+                if len(stack) > 0 and stack[-1] == block:
+                    stack.remove(block)
+                    found = True
+                    break
+
+        if not found:
+            print(f'Block {block} is not at any peak')
+            exit(-1)
+        if dest == 0:
+            table.add(block)
+        else:
+            if dest > n:
+                print(f'Destination {dest} is out of range 1-{n}')
+                exit(-1)
+            initial[dest-1].append(block)
+    fail = False
+    for i in range(1, n):
+        si = initial[i]
+        sf = final[i]
+        if len(sf) != len(si):
+            fail = True
+            break
+        if len(sf) != 0:
+            for j in range(0, len(sf)):
+                if sf[j] != si[j]:
+                    fail = True
+    if fail:
+        print("Final state not reached")
+        exit(-1)
+
+
+def parse_movements(movs):
+    result = []
+    movs = movs.split('\n')
+    for mov in movs:
+        if mov == '':
+            continue
+        res = MOV_PATTERN.search(mov)
+        block = int(res.group(1))
+        dest = int(res.group(2))
+        result.append((block, dest))
+    return result
 
 
 def parse_stack(line):
@@ -87,15 +159,37 @@ def format_final(facts):
     return "#program final.\ngoal :-" + ''.join(reformated)[0:-1] + ".\n:- not goal."
 
 
-def main(argv):
+def process_args():
+    argv = sys.argv
+
+    filename = argv[1]
     exhaustive = False
     shift = True
-    for i in range(2, len(argv)):
-        if argv[i] == "--exhaustive":
-            exhaustive = True
-        if argv[i] == "--noshift":
-            shift = False
-    filename = argv[1]
+    checkplan = False
+    telingo_path = "telingo"
+
+    if len(argv) > 2:
+        curr = 2
+        while curr < len(argv):
+            if argv[curr] == "-check":
+                checkplan = True
+            if argv[curr] == "-exhaustive":
+                exhaustive = True
+            if argv[curr] == "-noshift":
+                shift = False
+            if argv[curr] == "-telpath":
+                if len(argv) < curr + 2:
+                    print(HELP)
+                    exit(0)
+                curr += 1
+                telingo_path = argv[curr]
+            curr += 1
+
+    return filename, exhaustive, shift, telingo_path, checkplan
+
+
+def main(argv):
+    filename, exhaustive, shift, telingo_path, checkplan = process_args()
 
     n, initial, final = get_problem_states(filename)
     facts1 = stack_facts(initial)
@@ -117,17 +211,11 @@ def main(argv):
     problem_file.write(format_final(facts2))
     problem_file.close()
 
-    statinfo = stat('telingo_path.config')
-    if statinfo.st_size > 0:
-        path_file = open("telingo_path.config")
-        telingo_path = path_file.readline()
-        if telingo_path.endswith('\n'):
-            telingo_path = telingo_path[0:-1]
-        path_file.close()
-    else:
-        telingo_path = "telingo"
     system(telingo_path + " --verbose=0 encoding.txt instance.txt > result.txt 2> /dev/null")
-    print(build_solution())
+    movs = build_solution()
+    if checkplan:
+        check(offset, parse_movements(movs), initial, final)
+    print(movs)
 
 
 if __name__ == "__main__":
