@@ -5,7 +5,7 @@ import sys, re
 
 MOV_PATTERN = re.compile('mov\(([0-9]+),([0-9]+)\)')
 
-HELP = "blocks filename [-exhaustive] [-noshift] [-telpath <path>] [-check]"
+HELP = "blocks filename [-heuristic] [-noshift] [-telpath <path>] [-check]"
 
 
 def adjust(initial, final, offset=0):
@@ -161,7 +161,7 @@ def process_args():
     argv = sys.argv
 
     filename = argv[1]
-    exhaustive = False
+    exhaustive = True
     shift = True
     checkplan = False
     telingo_path = "telingo"
@@ -171,8 +171,8 @@ def process_args():
         while curr < len(argv):
             if argv[curr] == "-check":
                 checkplan = True
-            if argv[curr] == "-exhaustive":
-                exhaustive = True
+            if argv[curr] == "-heuristic":
+                exhaustive = False
             if argv[curr] == "-noshift":
                 shift = False
             if argv[curr] == "-telpath":

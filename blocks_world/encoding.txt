@@ -26,11 +26,15 @@ bad(S) :- not well(S), _stk(S), S!=0.
 comp(S) :- _hf(S,H), height(S,H), well(S).
 
 % Candidate movements
-% Blocks to destiny have higher priority
+
+% Movements that can't generate changes in solution length
+% Blocks to destiny
 fcand(B,S) :- on(0,0,B), _fn(S,L,B), height(S,L-1), S!=0, well(S), not comp(S). 
 fcand(B,SD) :- on(SO,L1,B), height(SO,L1), _fn(SD,L2,B), height(SD,L2-1), well(SD).
+% Blocks with destiny on it's current stack (critical for -noshift option, useless otherwise)
+fcand(B,0) :- on(SO,L1,B), height(SO,L1), _fn(SO,_,B), bad(SO).
 
-% Blocks from stack to ground have lower priority
+% Blocks from stack to ground can generate changes in solution length
 scand(B,0) :- on(S,L1,B), height(S,L1), bad(S).
 
 % Select just one priority movement as possibility for this state
@@ -64,9 +68,6 @@ mov(B) :- mov(B,S).
 % Inertia
 on(S,L,B) :- 'on(S,L,B), not mov(B).
 height(S,H) :- not c(height(S,_)), 'height(S,H).
-
-% Don't do self movements
-:- 'on(S,L,B), mov(B,S).
 
 % Stack height change 
 c(height(S,H+1)) :- 'height(S,H), mov(B,S), S!=0.
