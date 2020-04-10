@@ -25,6 +25,17 @@ bad(S) :- not well(S), _stk(S), S!=0.
 % Complete stacks
 comp(S) :- _hf(S,H), height(S,H), well(S).
 
+% HEURISTIC pathway
+% Next blocks to destiny
+nxt(B) :- _fn(S,L,B), well(S), not comp(S), height(S,L-1), not _exhaustive.
+
+% Depth to locked next blocks
+depth(S,H-HB) :- height(S,H), on(S,HB,B), nxt(B), HB<H, not _exhaustive.
+
+lt(depth(S1,D1), depth(S2,D2)) :- depth(S1,D1), fcand(S2,D2), D1<D2, not _exhaustive.
+pref(S2) :- depth(S2,D2), 0{depth(S2,D2) : gt(depth(S1,D1), depth(S2,D2))}0, not _exhaustive.
+
+
 % Candidate movements
 
 % Movements that can't generate changes in solution length
@@ -35,26 +46,24 @@ fcand(B,SD) :- on(SO,L1,B), height(SO,L1), _fn(SD,L2,B), height(SD,L2-1), well(S
 fcand(B,0) :- on(SO,L1,B), height(SO,L1), _fn(SO,_,B), bad(SO).
 
 % Blocks from stack to ground can generate changes in solution length
-scand(B,0) :- on(S,L1,B), height(S,L1), bad(S).
+%%%%%%%%%%%%%%%
+% WORKING MODES
+% HEURISTIC choose the stack with the lesser depth to next constructive movement
+scand(B,0) :- on(S,L1,B), height(S,L1), bad(S), 0{pref(_)}0, not _exhaustive.
+scand(B,0) :- on(S,L1,B), height(S,L1), pref(S), not _exhaustive.
+
+%%%%%%%%%%%%%%%
+% EXHAUSTIVE consider all unstacking to ground movements possible for each state
+scand(B,0) :- on(S,L1,B), height(S,L1), bad(S), _exhaustive.
 
 % Select just one priority movement as possibility for this state
 % Select the highest numbered block
 gt(fcand(B1,S1), fcand(B2,S2)) :- fcand(B1,S1), fcand(B2,S2), B1>B2.
 ffcand(B2,S2) :- fcand(B2,S2), 0{fcand(B2,S2) : gt(fcand(B1,S1), fcand(B2,S2))}0.
-excand(B,S) :- ffcand(B,S).
+cand(B,S) :- ffcand(B,S).
 
 % If no priority movements consider unstack to ground movements
-excand(B,S) :- scand(B,S), 0{ffcand(_,_)}0.
-
-%%%%%%%%%%%%%%%
-% WORKING MODES
-% EXHAUSTIVE consider all unstacking to ground movements possible for each state
-cand(B,S) :- excand(B,S), _exhaustive.
-
-% HEURISTIC choose just one unstacking to ground movement per state
-gte(excand(B1,S1),excand(B2,S2)) :- excand(B1,S1), excand(B2,S2), B1>B2, not _exhaustive.
-cand(B2,S2) :- excand(B2,S2), 0{excand(B2,S2) : gte(excand(B1,S1), excand(B2,S2))}0, not _exhaustive.
-%%%%%%%%%%%%%%%
+cand(B,S) :- scand(B,S), 0{ffcand(_,_)}0.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #program dynamic.
@@ -87,4 +96,6 @@ on(0,0,B) :- mov(B,0).
 height(S,H) :- H{on(S,L,B):blk(B),blk(L)}H, stk(S), S!=0, blk(H).
 
 #show mov/2.
-
+#show nxt/1.
+#show depth/2.
+#show pref/1.
