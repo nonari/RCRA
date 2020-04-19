@@ -1,8 +1,5 @@
 #!/usr/bin/python3
 
-# Manuel Couto Pintos
-# Alejandro Budiño Regueira
-
 from os import system
 import sys, re
 

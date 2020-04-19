@@ -1,6 +1,3 @@
-% Manuel Couto Pintos
-% Alejandro Budiño Regueira
-
 % on(S,L,B): block B is at level L in Stack S
 % height(S,H): stack S has H blocks
 % mov(B,S): move block B to stack S
