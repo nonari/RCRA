@@ -1,68 +1,63 @@
 #!/usr/bin/python3
 
+# Manuel Couto Pintos
+# Alejandro Budiño Regueira
+
 from os import system
 import sys, re
 
 MOV_PATTERN = re.compile('mov\(([0-9]+),([0-9]+)\)')
 
-HELP = "blocks filename [-heuristic] [-noshift] [-telpath <path>] [-check]"
+HELP = "blocks filename [-heuristic] [-telpath <path>]"
 
 
-def adjust(initial, final, offset=0):
-    for i in range(offset):
-        final.insert(0, [])
-    diff = len(initial) - len(final)
-    absdiff = abs(diff)
-    if diff < 0:
-        for i in range(absdiff):
-            initial.append([])
-    if diff > 0:
-        for i in range(absdiff):
-            final.append([])
+def list_to_dict(stacks):
+    dic = dict()
+    for stack in stacks:
+        if len(stack) > 0:
+            fst_block = stack[0]
+            dic[fst_block] = stack
+    return dic
 
 
-def check(offset, movs, initial, final):
-    adjust(initial, final, offset)
-    n = len(initial)
-    table = set()
+def translate(movs, initial, final):
+    translated = []
     for mov in movs:
         block = mov[0]
         dest = mov[1]
-        found = False
-        if block in table:
-            found = True
-            table.remove(block)
-        else:
-            for stack in initial:
-                if len(stack) > 0 and stack[-1] == block:
-                    stack.remove(block)
-                    found = True
-                    break
 
+        found = False
+        for k in initial.keys():
+            if len(initial[k]) > 0 and initial[k][-1] == block:
+                found = True
+                initial[k].remove(block)
         if not found:
-            print(f'Block {block} is not at any peak')
-            exit(-1)
-        if dest == 0:
-            table.add(block)
+            print(f'block {block} is not at any peak')
+        if block == dest:
+            translated.append(f'm{block, 0}\n')
+            initial[block] = [block]
         else:
-            if dest > n:
-                print(f'Destination {dest} is out of range 1-{n}')
-                exit(-1)
-            initial[dest-1].append(block)
+            translated.append(f'm{block, initial[dest][-1]}\n')
+            initial[dest].append(block)
+
     fail = False
-    for i in range(1, n):
-        si = initial[i]
-        sf = final[i]
-        if len(sf) != len(si):
-            fail = True
-            break
-        if len(sf) != 0:
-            for j in range(0, len(sf)):
-                if sf[j] != si[j]:
-                    fail = True
+    for k in initial.keys():
+        if k in final:
+            if len(final[k]) == len(initial[k]):
+                if len(final[k]) == 0:
+                    continue
+                if len(initial[k]) != 0:
+                    for j in range(0, len(initial[k])):
+                        if initial[k][j] != final[k][j]:
+                            fail = True
+            else:
+                fail = True
+                pass
     if fail:
         print("Final state not reached")
-        exit(-1)
+        exit(1)
+
+    return ''.join(translated)
 
 
 def parse_movements(movs):
@@ -119,11 +114,11 @@ def build_solution():
     return ''.join(solution)
 
 
-def final_stack_facts(stacks, offset):
+def final_stack_facts(stacks):
     facts = []
-    s = 1 + offset
     for stack in stacks:
         lv = 1
+        s = stack[0]
         for block in stack:
             facts.append(f'fn({s},{lv},{block})')
             lv += 1
@@ -131,11 +126,11 @@ def final_stack_facts(stacks, offset):
     return facts
 
 
-def stack_facts(stacks, offset=0):
+def stack_facts(stacks):
     facts = []
-    s = 1 + offset
     for stack in stacks:
         lv = 1
+        s = stack[0]
         for block in stack:
             facts.append(f'on({s},{lv},{block})')
             lv += 1
@@ -162,19 +157,13 @@ def process_args():
 
     filename = argv[1]
     exhaustive = True
-    shift = True
-    checkplan = False
     telingo_path = "telingo"
 
     if len(argv) > 2:
         curr = 2
         while curr < len(argv):
-            if argv[curr] == "-check":
-                checkplan = True
             if argv[curr] == "-heuristic":
                 exhaustive = False
-            if argv[curr] == "-noshift":
-                shift = False
             if argv[curr] == "-telpath":
                 if len(argv) < curr + 2:
                     print(HELP)
@@ -183,26 +172,20 @@ def process_args():
                 telingo_path = argv[curr]
             curr += 1
 
-    return filename, exhaustive, shift, telingo_path, checkplan
+    return filename, exhaustive, telingo_path
 
 
-def main(argv):
-    filename, exhaustive, shift, telingo_path, checkplan = process_args()
+def main():
+    filename, exhaustive, telingo_path = process_args()
 
     n, initial, final = get_problem_states(filename)
     facts1 = stack_facts(initial)
-    initial_stacks = len(initial)
-    total_stacks = initial_stacks + len(final)
 
-    offset = 0
-    if shift:
-        offset = initial_stacks
-    facts2 = stack_facts(final, offset)
-    facts3 = final_stack_facts(final, offset)
+    facts2 = stack_facts(final)
+    facts3 = final_stack_facts(final)
 
     problem_file = open("instance.txt", "w")
     problem_file.write(f"#const n = {n}.\n")
-    problem_file.write(f"#const s = {total_stacks}.\n")
     if exhaustive:
         problem_file.write("#program initial.\n exhaustive.\n")
     problem_file.write(format_initial(facts1 + facts3))
@@ -211,13 +194,12 @@ def main(argv):
 
     system(telingo_path + " --verbose=0 encoding.txt instance.txt > result.txt 2> /dev/null")
     movs = build_solution()
-    if checkplan:
-        check(offset, parse_movements(movs), initial, final)
-    print(movs)
+    translated = translate(parse_movements(movs), list_to_dict(initial), list_to_dict(final))
+    print(translated)
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(HELP)
         exit(0)
-    main(sys.argv)
+    main()

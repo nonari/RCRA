@@ -3,22 +3,21 @@ El programa se invoca mediante:
 o
 pyhton blocks
 
-blocks <file> [-heuristic] [-noshift] [-telpath <path>]
+blocks <file> [-heuristic] [-telpath <path>]
 
 El primer argumento es siempre la ruta del fichero con la codificación del problema.
 
 Opciones:
--heuristic: Se calcula una solución de forma rápida, pero puede no ser mínima (lo es del 1 al 5).
-
--noshift: Por defecto las columnas resultado se situan en stacks colocados a partir del último stack del estado inicial, si este estaba en la posición n el primer stack del resultado se colocará en n+1, esta opción coloca las columnas resultado a partir de la primera posición. Dependiendo de la configuración del problema puede producir un cálculo mucho más rápido de una solución mínima.
+-heuristic: Se calcula una solución de forma rápida, pero puede no ser mínima (lo es en todos los problemas propuestos).
+La heuristica consiste en desapilar primero de aquel stack en el que el próximo movimiento constructivo está a menor profundidad.
 
 -telpath: Por algún motivo en algunas instalaciones no se puede localizar el binario de telingo en el PATH al invocarlo con system. Con esta opción se le puede pasar la ruta al directorio que contiene el ejecutable.
 Ej: ./blocks .dom01.txt -telpath /home/user/anaconda3/bin/
 
 Aclaraciones:
-mov(B,0) representa el desapilado de un bloque B hacia la mesa.
+El programa representa internamente los movimientos como mov(B,S), donde S es un stack.
+No tenemos movimientos m(B,0) ya que cada bloque desapilado no constructivo siempre se apila en un stack
+nombrado como el propio bloque.
+Tras recuperar la solución de telingo los movimientos se traducen al formato propuesto en el enunciado del problema m(B1,B2).
 
-Tiempos:
-           P1    P2    P3    P4    P5    P6
- Default   0s    1s    1s    3.7s  6m    ~
--noshift   0s    0.1s  0.2s  0.5s  6.5s  35s
+El problema 4 tarda 15s, los siguientes tardan demasiado.

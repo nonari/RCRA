@@ -1,26 +1,29 @@
+% Manuel Couto Pintos
+% Alejandro Budiño Regueira
+
 % on(S,L,B): block B is at level L in Stack S
 % height(S,H): stack S has H blocks
 % mov(B,S): move block B to stack S
 
 #program initial.
 blk(1..n).
-stk(0..s).
+stk(0..n).
 h(0..n).
 
 % Final states are also at program initial so we can reference them always 
 % Final height
-hf(S,H) :- H{fn(S,L,B):blk(B),blk(L)}H, stk(S), S!=0, h(H).
+hf(S,H) :- H{fn(S,L,B):blk(B),blk(L)}H, stk(S), h(H).
 
 % Init stacks height
-height(S,H) :- H{on(S,L,B):blk(B),blk(L)}H, stk(S), S!=0, h(H).
+height(S,H) :- H{on(S,L,B):blk(B),blk(L)}H, stk(S), h(H).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #program always.
 
 % Mark well formed stacks for max current height
-match(S,L) :- height(S,H), _fn(S,L,B), on(S,L,B), L<=H, S!=0.
-well(S) :- height(S,H), H{match(S,L) : _blk(L)}H, S!=0.
-bad(S) :- not well(S), _stk(S), S!=0.
+match(S,L) :- height(S,H), _fn(S,L,B), on(S,L,B), L<=H.
+well(S) :- height(S,H), H{match(S,L) : _blk(L)}H.
+bad(S) :- not well(S), _stk(S).
 
 % Complete stacks
 comp(S) :- _hf(S,H), height(S,H), well(S).
@@ -40,21 +43,21 @@ pref(S2) :- depth(S2,D2), 0{depth(S2,D2) : gt(depth(S1,D1), depth(S2,D2))}0, not
 
 % Movements that can't generate changes in solution length
 % Blocks to destiny
-fcand(B,S) :- on(0,0,B), _fn(S,L,B), height(S,L-1), S!=0, well(S), not comp(S). 
+fcand(B,S) :- on(0,0,B), _fn(S,L,B), height(S,L-1), well(S), not comp(S).
 fcand(B,SD) :- on(SO,L1,B), height(SO,L1), _fn(SD,L2,B), height(SD,L2-1), well(SD).
-% Blocks with destiny on it's current stack (critical for -noshift option, useless otherwise)
-fcand(B,0) :- on(SO,L1,B), height(SO,L1), _fn(SO,_,B), bad(SO).
+% Blocks with destiny on it's current stack
+fcand(B,B) :- on(SO,L1,B), height(SO,L1), _fn(SO,_,B), bad(SO).
 
 % Blocks from stack to ground can generate changes in solution length
 %%%%%%%%%%%%%%%
 % WORKING MODES
 % HEURISTIC choose the stack with the lesser depth to next constructive movement
-scand(B,0) :- on(S,L1,B), height(S,L1), bad(S), 0{pref(_)}0, not _exhaustive.
-scand(B,0) :- on(S,L1,B), height(S,L1), pref(S), not _exhaustive.
+scand(B,B) :- on(S,L1,B), height(S,L1), bad(S), 0{pref(_)}0, not _exhaustive.
+scand(B,B) :- on(S,L1,B), height(S,L1), pref(S), not _exhaustive.
 
 %%%%%%%%%%%%%%%
 % EXHAUSTIVE consider all unstacking to ground movements possible for each state
-scand(B,0) :- on(S,L1,B), height(S,L1), bad(S), _exhaustive.
+scand(B,B) :- on(S,L1,B), height(S,L1), bad(S), _exhaustive.
 
 % Select just one priority movement as possibility for this state
 % Select the highest numbered block
@@ -79,23 +82,13 @@ on(S,L,B) :- 'on(S,L,B), not mov(B).
 height(S,H) :- not c(height(S,_)), 'height(S,H).
 
 % Stack height change 
-c(height(S,H+1)) :- 'height(S,H), mov(B,S), S!=0.
-c(height(S,L-1)) :- 'on(S,L,B), mov(B), S!=0.
+c(height(S,H+1)) :- 'height(S,H), mov(B,S).
+c(height(S,L-1)) :- 'on(S,L,B), mov(B).
 height(S,H) :- c(height(S,H)).
 
 % Block moved to stack
-on(S,H+1,B) :- 'height(S,H), mov(B,S), S!=0.
-
-% Block moved to table
-on(0,0,B) :- mov(B,0).
+on(S,H+1,B) :- 'height(S,H), mov(B,S).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#program final.
-
-% Final heights
-height(S,H) :- H{on(S,L,B):blk(B),blk(L)}H, stk(S), S!=0, blk(H).
 
 #show mov/2.
-#show nxt/1.
-#show depth/2.
-#show pref/1.
